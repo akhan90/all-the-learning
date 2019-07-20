@@ -1,0 +1,42 @@
+Installing Nexus on CentOS
+
+create user nexus and grant sudo privilides.
+useradd nexus
+passwd nexus
+usermod -aG wheel nexus
+
+nexus runs on JAVA : download oracle JAVA 
+sudo mkdir -p /opt/tools/java
+cd /opt/tools/java
+wget --no-cookies --no-check-certificate --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" http://download.oracle.com/otn-pub/java/jdk/8u171-b11/512cd62ec5174c3487ac17c61aaa89e8/jdk-8u171-linux-x64.tar.gz
+extract java 
+tar -xzvf <java-tar-name>
+
+
+Download Nexus Manager:
+
+wget https://sonatype-download.global.ssl.fastly.net/repository/repositoryManager/3/nexus-3.12.1-01-unix.tar.gz
+tar -xzvf <nexus-tar-name>
+mv <nexus-folder-name> /opt/nexus
+grant the user nexus and group ownership to nexus directory
+sudo chown -R nexus.nexus /opt/nexus
+
+edit the nexus startup script to point to your java installation
+ vi /opt/nexus/bin/nexus
+ update INSTALL4J_JAVA_HOME_OVERRIDE=<your-java-install-path> (/opt/tools/java/jdk-version)
+ 
+ update the nexus.rc file to make sure nexus is run user "nexus".
+ 
+ if you want to tweak the logging the data path for the nexus 
+ go ahead and make changes to the nexus.vmoptions files in /opt/nexus/etc/
+ 
+ afer you have made the desired changes.
+ 
+ lets create a symbolic link for the nexus script in /etc/init.d
+ 
+ sudo ln -s /opt/nexus/bin/nexus /etc/init.d/nexus
+ sudo chkconfig --add nexus
+ sudo chkconfig --level 345 nexus on
+ 
+ startup nexus
+ service nexus start
