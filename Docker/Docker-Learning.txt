@@ -1,0 +1,18 @@
+#=========================================================================================================================================
+#                                                           DOCKER                                                                       #
+#=========================================================================================================================================
+
+Step 1: Install DOCKER
+
+There are tons of ways to Install DOCKER , and can be installed on Linux,Windows and MacOS.
+We will be going through the install on a Linux operating system.
+
+For Deep Dive into installation , please go through official documentation available on Docker.
+https://docs.docker.com/install/
+
+In this Course We will be using  convenient Script for Installatio on Linux
+
+Run Below Command and We are done.
+curl -fsSL https://get.docker.com -o get-docker.sh 
+sh get-docker.sh
+
