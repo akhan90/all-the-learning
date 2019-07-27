@@ -1,508 +1,81 @@
 https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#networkpolicy-v1-networking-k8s-io
 
+#=========================================================================================================================================
+#                                                           kubernetes                                                                   #
+#=========================================================================================================================================
 
-First Create a Network in Gcloud
+We will be performing a Installation of kubernetes hard way using kelsey hightowers documentations.
 
-gcloud compute networks create kubernetes-the-hard-way --subnet-mode custom
+We will be using CentOS 7 machines (for kubernetes cluster formation) in our scenario,
+Our base machine(i.e local machine) will be that of Ubuntu
 
-Allocate a subnet associated with this networkpolicy-v1-networking-k8s-io
+#=========================================================================================================================================
+#                                                Step 1: Set Up Google Cloud Free Tier                                                   #
+#=========================================================================================================================================
 
-gcloud compute networks subnets create kubernetes  --network kubernetes-the-hard-way --range 10.240.0.0/24
+1) Sign Up at Cloud.google.com
+2) install google-sdk on your base machine.
+https://cloud.google.com/sdk/docs/quickstart-debian-ubuntu
 
-Create a Firewall Rule to Allow communication across all protocols.
+# Add the Cloud SDK distribution URI as a package source
+echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
 
-gcloud compute firewall-rules create kubernetes-the-hard-way-allow-internal \
-  --allow tcp,udp,icmp \
-  --network kubernetes-the-hard-way \
-  --source-ranges 10.240.0.0/24,10.200.0.0/16
-  
-Create Firewall Rule to allow External Communication
+# Import the Google Cloud Platform public key
+curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
 
-gcloud compute firewall-rules create kubernetes-the-hard-way-allow-external \
-  --allow tcp:22,tcp:6443,icmp \
-  --network kubernetes-the-hard-way \
-  --source-ranges 0.0.0.0/0
-  
-  
-List the firewall-rules
-gcloud compute firewall-rules list --filter="network:kubernetes-the-hard-way"
+# Update the package list and install the Cloud SDK
+sudo apt-get update && sudo apt-get install google-cloud-sdk
 
-#######NEED TO CREATE A EXTERNAL LOAD BALANCER FOR Communication###########
+3) gcloud init , follow the steps and select your project and default compute zone (I chose us-central1-a)
 
-Generate Controller Nodes
+Cheat Sheet for gcloud operations is available at https://gist.github.com/pydevops/cffbd3c694d599c6ca18342d3625af97
 
-for i in 0 1; do
-  gcloud compute instances create controller-${i} \
-    --async \
-    --boot-disk-size 10GB \
-    --can-ip-forward \
-    --image-family ubuntu-1804-lts \
-    --image-project ubuntu-os-cloud \
-    --machine-type n1-standard-1 \
-    --private-network-ip 10.240.0.1${i} \
-    --scopes compute-rw,storage-ro,service-management,service-control,logging-write,monitoring \
-    --subnet kubernetes \
-    --tags kubernetes-the-hard-way,controller
-done
-  
-  
-Generate Worker Nodes
-for i in 0 1 ; do
-  gcloud compute instances create worker-${i} \
-    --async \
-    --boot-disk-size 10GB \
-    --can-ip-forward \
-    --image-family ubuntu-1804-lts \
-    --image-project ubuntu-os-cloud \
-    --machine-type n1-standard-1 \
-    --metadata pod-cidr=10.200.${i}.0/24 \
-    --private-network-ip 10.240.0.2${i} \
-    --scopes compute-rw,storage-ro,service-management,service-control,logging-write,monitoring \
-    --subnet kubernetes \
-    --tags kubernetes-the-hard-way,worker
-done
+to verify run the command 
+gcloud config get-value compute/zone
+
+Once Gcloud sdk has been set up we will proceed with Next Step
+
+#=========================================================================================================================================
+#                                                Step 2: Getting the Client Tools                                                        #
+#=========================================================================================================================================
+
+We will installing Client tools on our local ubuntu machine, the tools are required to generate kubeconfig files and client server certificates required for Authencation.
+
+Good to read about PKI infrastructure:
+https://searchsecurity.techtarget.com/definition/PKI
+https://en.wikipedia.org/wiki/Public_key_infrastructure
 
 
+1) Install Tools on ubuntu (use below commands)
 
-Generate CA certificates required for authentication.
-===Generate CA authourty certificates=======
+mkdir -p ~/certs && cd ~/certs
+
+wget --show-progress  --timestamping \
+  https://pkg.cfssl.org/R1.2/cfssl_linux-amd64 \
+  https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64
+
+wget https://storage.googleapis.com/kubernetes-release/release/v1.12.0/bin/linux/amd64/kubectl
+
+chmod +x *
 {
-
-cat > ca-config.json <<EOF
-{
-  "signing": {
-    "default": {
-      "expiry": "8760h"
-    },
-    "profiles": {
-      "kubernetes": {
-        "usages": ["signing", "key encipherment", "server auth", "client auth"],
-        "expiry": "8760h"
-      }
-    }
-  }
+sudo cp  cfssl_linux-amd64 /usr/local/bin/cfssl
+sudo cp cfssljson_linux-amd64 /usr/local/bin/cfssljson
+sudo cp kubectl /usr/local/bin/
 }
-EOF
-
-cat > ca-csr.json <<EOF
-{
-  "CN": "Kubernetes",
-  "key": {
-    "algo": "rsa",
-    "size": 2048
-  },
-  "names": [
-    {
-      "C": "US",
-      "L": "Portland",
-      "O": "Kubernetes",
-      "OU": "CA",
-      "ST": "Oregon"
-    }
-  ]
-}
-EOF
-
-cfssl gencert -initca ca-csr.json | cfssljson -bare ca
-
-}
- 
- ####===Generate admin user certificates=======###
-{
-
-cat > admin-csr.json <<EOF
-{
-  "CN": "admin",
-  "key": {
-    "algo": "rsa",
-    "size": 2048
-  },
-  "names": [
-    {
-      "C": "US",
-      "L": "Portland",
-      "O": "system:masters",
-      "OU": "Kubernetes The Hard Way",
-      "ST": "Oregon"
-    }
-  ]
-}
-EOF
-
-cfssl gencert \
-  -ca=ca.pem \
-  -ca-key=ca-key.pem \
-  -config=ca-config.json \
-  -profile=kubernetes \
-  admin-csr.json | cfssljson -bare admin
-
-} 
-
-
-##############Generate Worker certificates
-
-for instance in worker-0 worker-1; do
-cat > ${instance}-csr.json <<EOF
-{
-  "CN": "system:node:${instance}",
-  "key": {
-    "algo": "rsa",
-    "size": 2048
-  },
-  "names": [
-    {
-      "C": "US",
-      "L": "Portland",
-      "O": "system:nodes",
-      "OU": "Kubernetes The Hard Way",
-      "ST": "Oregon"
-    }
-  ]
-}
-EOF
-
-EXTERNAL_IP=$(gcloud compute instances describe ${instance} \
-  --format 'value(networkInterfaces[0].accessConfigs[0].natIP)')
-
-INTERNAL_IP=$(gcloud compute instances describe ${instance} \
-  --format 'value(networkInterfaces[0].networkIP)')
-
-cfssl gencert \
-  -ca=ca.pem \
-  -ca-key=ca-key.pem \
-  -config=ca-config.json \
-  -hostname=${instance},${INTERNAL_IP} \
-  -profile=kubernetes \
-  ${instance}-csr.json | cfssljson -bare ${instance}
-done
-
-
-
-########Generate Controller Manager Certificates
 
 {
-
-cat > kube-controller-manager-csr.json <<EOF
-{
-  "CN": "system:kube-controller-manager",
-  "key": {
-    "algo": "rsa",
-    "size": 2048
-  },
-  "names": [
-    {
-      "C": "US",
-      "L": "Portland",
-      "O": "system:kube-controller-manager",
-      "OU": "Kubernetes The Hard Way",
-      "ST": "Oregon"
-    }
-  ]
-}
-EOF
-
-cfssl gencert \
-  -ca=ca.pem \
-  -ca-key=ca-key.pem \
-  -config=ca-config.json \
-  -profile=kubernetes \
-  kube-controller-manager-csr.json | cfssljson -bare kube-controller-manager
-
+cfssl version
+kubectl version
 }
 
 
+#=========================================================================================================================================
+#                                                Step 3: compute Resources                                                        #
+#=========================================================================================================================================
 
-############## Generate Kube-Proxy Certificates
 
-{
+Good to Know about kubernetes networking model and Cluster Networking
+https://kubernetes.io/docs/concepts/cluster-administration/networking/#kubernetes-model
 
-cat > kube-proxy-csr.json <<EOF
-{
-  "CN": "system:kube-proxy",
-  "key": {
-    "algo": "rsa",
-    "size": 2048
-  },
-  "names": [
-    {
-      "C": "US",
-      "L": "Portland",
-      "O": "system:node-proxier",
-      "OU": "Kubernetes The Hard Way",
-      "ST": "Oregon"
-    }
-  ]
-}
-EOF
 
-cfssl gencert \
-  -ca=ca.pem \
-  -ca-key=ca-key.pem \
-  -config=ca-config.json \
-  -profile=kubernetes \
-  kube-proxy-csr.json | cfssljson -bare kube-proxy
 
-}
-
-
-#######Generate API server Certificates
-
-
-{
-
-KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
-  --region $(gcloud config get-value compute/region) \
-  --format 'value(address)')
-
-CONTROLLER_0_ADDRESS=$(gcloud compute instances describe controller-0 --format 'value(networkInterfaces[0].networkIP)')
-CONTROLLER_1_ADDRESS=$(gcloud compute instances describe controller-1 --format 'value(networkInterfaces[0].networkIP)')
-KUBE_HA_INTERNAL_ADDRESS=$(gcloud compute instances describe ha-proxy-kube --format 'value(networkInterfaces[0].networkIP)')
-cat > kubernetes-csr.json <<EOF
-{
-  "CN": "kubernetes",
-  "key": {
-    "algo": "rsa",
-    "size": 2048
-  },
-  "names": [
-    {
-      "C": "US",
-      "L": "Portland",
-      "O": "Kubernetes",
-      "OU": "Kubernetes The Hard Way",
-      "ST": "Oregon"
-    }
-  ]
-}
-EOF
-
-cfssl gencert \
-  -ca=ca.pem \
-  -ca-key=ca-key.pem \
-  -config=ca-config.json \
-  -hostname=${KUBE_HA_INTERNAL_ADDRESS},${CONTROLLER_0_ADDRESS},${CONTROLLER_1_ADDRESS},${KUBERNETES_PUBLIC_ADDRESS},127.0.0.1,kubernetes.default \
-  -profile=kubernetes \
-  kubernetes-csr.json | cfssljson -bare kubernetes
-
-}
-
-
-
-#######Generate Service Account Certificates
-
-{
-
-cat > service-account-csr.json <<EOF
-{
-  "CN": "service-accounts",
-  "key": {
-    "algo": "rsa",
-    "size": 2048
-  },
-  "names": [
-    {
-      "C": "US",
-      "L": "Portland",
-      "O": "Kubernetes",
-      "OU": "Kubernetes The Hard Way",
-      "ST": "Oregon"
-    }
-  ]
-}
-EOF
-
-cfssl gencert \
-  -ca=ca.pem \
-  -ca-key=ca-key.pem \
-  -config=ca-config.json \
-  -profile=kubernetes \
-  service-account-csr.json | cfssljson -bare service-account
-
-}
-
-Copy the appropriate certificates and private keys to each worker instance:
-
-for instance in worker-0 worker-1 worker-2; do
-  gcloud compute scp ca.pem ${instance}-key.pem ${instance}.pem ${instance}:~/
-done
-Copy the appropriate certificates and private keys to each controller instance:
-
-for instance in controller-0 controller-1 controller-2; do
-  gcloud compute scp ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem \
-    service-account-key.pem service-account.pem ${instance}:~/
-done
-
-
-####Generating Kubernetes Configuration Files for Authentication
-#Client Authentication Configs
-kubeconfig files for the controller manager, kubelet, kube-proxy, and scheduler clients and the admin user.
-
-
-KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
-  --region $(gcloud config get-value compute/region) \
-  --format 'value(address)')
-  
-
-#Generate a kubeconfig file for each worker node:
-
-for instance in worker-0 worker-1 ; do
-  kubectl config set-cluster kubernetes-the-hard-way \
-    --certificate-authority=../../certs/ca.pem \
-    --embed-certs=true \
-    --server=https://${KUBERNETES_PUBLIC_ADDRESS}:6443 \
-    --kubeconfig=${instance}.kubeconfig
-
-  kubectl config set-credentials system:node:${instance} \
-    --client-certificate=../../certs/${instance}.pem \
-    --client-key=../../certs/${instance}-key.pem \
-    --embed-certs=true \
-    --kubeconfig=${instance}.kubeconfig
-
-  kubectl config set-context default \
-    --cluster=kubernetes-the-hard-way \
-    --user=system:node:${instance} \
-    --kubeconfig=${instance}.kubeconfig
-
-  kubectl config use-context default --kubeconfig=${instance}.kubeconfig
-done
-
-
-
-
-#The kube-proxy Kubernetes Configuration File
-#Generate a kubeconfig file for the kube-proxy service:
-
-{
-  kubectl config set-cluster kubernetes-the-hard-way \
-    --certificate-authority=../../certs/ca.pem \
-    --embed-certs=true \
-    --server=https://${KUBERNETES_PUBLIC_ADDRESS}:6443 \
-    --kubeconfig=kube-proxy.kubeconfig
-
-  kubectl config set-credentials system:kube-proxy \
-    --client-certificate=../../certs/kube-proxy.pem \
-    --client-key=../../certs/kube-proxy-key.pem \
-    --embed-certs=true \
-    --kubeconfig=kube-proxy.kubeconfig
-
-  kubectl config set-context default \
-    --cluster=kubernetes-the-hard-way \
-    --user=system:kube-proxy \
-    --kubeconfig=kube-proxy.kubeconfig
-
-  kubectl config use-context default --kubeconfig=kube-proxy.kubeconfig
-}
-
-#The kube-controller-manager Kubernetes Configuration File
-#Generate a kubeconfig file for the kube-controller-manager service:
-
-{
-  kubectl config set-cluster kubernetes-the-hard-way \
-    --certificate-authority=../../certs/ca.pem \
-    --embed-certs=true \
-    --server=https://127.0.0.1:6443 \
-    --kubeconfig=kube-controller-manager.kubeconfig
-
-  kubectl config set-credentials system:kube-controller-manager \
-    --client-certificate=../../certs/kube-controller-manager.pem \
-    --client-key=../../certs/kube-controller-manager-key.pem \
-    --embed-certs=true \
-    --kubeconfig=kube-controller-manager.kubeconfig
-
-  kubectl config set-context default \
-    --cluster=kubernetes-the-hard-way \
-    --user=system:kube-controller-manager \
-    --kubeconfig=kube-controller-manager.kubeconfig
-
-  kubectl config use-context default --kubeconfig=kube-controller-manager.kubeconfig
-}
-
-
-
-The kube-scheduler Kubernetes Configuration File
-Generate a kubeconfig file for the kube-scheduler service:
-
-{
-  kubectl config set-cluster kubernetes-the-hard-way \
-    --certificate-authority=../../certs/ca.pem \
-    --embed-certs=true \
-    --server=https://127.0.0.1:6443 \
-    --kubeconfig=kube-scheduler.kubeconfig
-
-  kubectl config set-credentials system:kube-scheduler \
-    --client-certificate=../../certs/kube-scheduler.pem \
-    --client-key=../../certs/kube-scheduler-key.pem \
-    --embed-certs=true \
-    --kubeconfig=kube-scheduler.kubeconfig
-
-  kubectl config set-context default \
-    --cluster=kubernetes-the-hard-way \
-    --user=system:kube-scheduler \
-    --kubeconfig=kube-scheduler.kubeconfig
-
-  kubectl config use-context default --kubeconfig=kube-scheduler.kubeconfig
-}
-
-
-#The admin Kubernetes Configuration File
-#Generate a kubeconfig file for the admin user:
-
-{
-  kubectl config set-cluster kubernetes-the-hard-way \
-    --certificate-authority=../../certs/ca.pem \
-    --embed-certs=true \
-    --server=https://127.0.0.1:6443 \
-    --kubeconfig=admin.kubeconfig
-
-  kubectl config set-credentials admin \
-    --client-certificate=../../certs/admin.pem \
-    --client-key=../../certs/admin-key.pem \
-    --embed-certs=true \
-    --kubeconfig=admin.kubeconfig
-
-  kubectl config set-context default \
-    --cluster=kubernetes-the-hard-way \
-    --user=admin \
-    --kubeconfig=admin.kubeconfig
-
-  kubectl config use-context default --kubeconfig=admin.kubeconfig
-}
-
-
-Distribute the Kubernetes Configuration Files
-Copy the appropriate kubelet and kube-proxy kubeconfig files to each worker instance:
-
-for instance in worker-0 worker-1 worker-2; do
-  gcloud compute scp ${instance}.kubeconfig kube-proxy.kubeconfig ${instance}:~/
-done
-Copy the appropriate kube-controller-manager and kube-scheduler kubeconfig files to each controller instance:
-
-for instance in controller-0 controller-1 controller-2; do
-  gcloud compute scp admin.kubeconfig kube-controller-manager.kubeconfig kube-scheduler.kubeconfig ${instance}:~/
-done
-
-
-####Generating the Data Encryption Config and Key
-
-ENCRYPTION_KEY=$(head -c 32 /dev/urandom | base64)
-
-cat > encryption-config.yaml <<EOF
-kind: EncryptionConfig
-apiVersion: v1
-resources:
-  - resources:
-      - secrets
-    providers:
-      - aescbc:
-          keys:
-            - name: key1
-              secret: ${ENCRYPTION_KEY}
-      - identity: {}
-EOF
-
-
-Copy the encryption-config.yaml encryption config file to each controller instance:
-
-for instance in controller-0 controller-1 controller-2; do
-  gcloud compute scp encryption-config.yaml ${instance}:~/
-done
