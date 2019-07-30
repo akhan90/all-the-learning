@@ -16,3 +16,27 @@ Run Below Command and We are done.
 curl -fsSL https://get.docker.com -o get-docker.sh 
 sh get-docker.sh
 
+######################################################################
+# to get the information about the docker system
+#
+# docker system info 
+# docker system df - diskspace usage done by docker.
+#######################################################################
+ When pulling the images from registry
+ Two manifest are checked:
+ FAT manifest (System info about OS and architecture) -> Image manifest (If an image for the architecture and OS is available)
+ Every image is checked against the check to ensure that the image requested was downloaded.
+######################################################
+# TO get the hash for the image
+# docker image ls --digests
+# To pull all the images matching the system specification
+# docker pull <image_name> -a
+#To build a image
+# docker build -t <image:tag> Dockerfile
+######################################################
+
+Volumes are stored in a part of the host filesystem which is managed by Docker (/var/lib/docker/volumes/ on Linux). Non-Docker processes should not modify this part of the filesystem. Volumes are the best way to persist data in Docker.
+
+Bind mounts may be stored anywhere on the host system. They may even be important system files or directories. Non-Docker processes on the Docker host or a Docker container can modify them at any time.
+
+tmpfs mounts are stored in the host system’s memory only, and are never written to the host system’s filesystem.
