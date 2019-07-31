@@ -15,12 +15,18 @@ In this Course We will be using  convenient Script for Installatio on Linux
 Run Below Command and We are done.
 curl -fsSL https://get.docker.com -o get-docker.sh 
 sh get-docker.sh
-
+#=========================================================================================================================================
+#                                                           DOCKER  System                                                               #
+#=========================================================================================================================================
 ######################################################################
 # to get the information about the docker system
 #
 # docker system info 
 # docker system df - diskspace usage done by docker.
+
+#=========================================================================================================================================
+#                                                           DOCKER Images                                                                #
+#=========================================================================================================================================
 #######################################################################
  When pulling the images from registry
  Two manifest are checked:
@@ -33,10 +39,44 @@ sh get-docker.sh
 # docker pull <image_name> -a
 #To build a image
 # docker build -t <image:tag> Dockerfile
+# Toc create a image from a container
+# docker commit <container_name> <image_tag>
+#
+CMD instructions get overwrritten at run time if any command line argument is passed when when running th container
+ENTRTPOINT instructions append the command line arguments paseed at container run time.
+#=========================================================================================================================================
+#                                                           DOCKER containers                                                            #
+#=========================================================================================================================================
 ######################################################
+# Attach to a running container
+# docker exec -it <docker name> /bin/bash (same command can be used for executing a command in a container)
+#Attach to container as root
+# docker exec -it --user=root <container_name> /bin/sh
+# run a container
+# docker run  -d --name="container_name" -phostPort:containerPort <image_name>
+#to check the ports opened in a container
+# docker container prot <container_name>
+#to check the running processes in a container
+# docker top <container_name>
+#to copy file to a container from local file system
+# docker cp <src_file_path> <container_name:<desinatation_path>
+#to check the difference in locafile system and docker file system filesystem
+#docker diff <container_name>
 
-Volumes are stored in a part of the host filesystem which is managed by Docker (/var/lib/docker/volumes/ on Linux). Non-Docker processes should not modify this part of the filesystem. Volumes are the best way to persist data in Docker.
+#=========================================================================================================================================
+#                                                           DOCKER    Logs                                                               #
+#=========================================================================================================================================
+#In some cases, docker logs may not show useful information unless you take additional steps.
+#If you use a logging driver which sends logs to a file, an external host, a database, or another logging back-end, docker logs may not show useful information.
+#If your image runs a non-interactive process such as a web server or a database, that application may send its output to log files instead of STDOUT and STDERR
+# One of the ways
+ # forward request and error logs to docker log collector
+#   RUN ln -sf /dev/stdout /var/log/nginx/access.log \
+#	&& ln -sf /dev/stderr /var/log/nginx/error.log
+#In case of logger plugins, the plugins can be overwritten on container basis by –log-driver –log-opts flags.
 
-Bind mounts may be stored anywhere on the host system. They may even be important system files or directories. Non-Docker processes on the Docker host or a Docker container can modify them at any time.
+#=========================================================================================================================================
+#                                                           DOCKER Network                                                               #
+#=========================================================================================================================================
 
-tmpfs mounts are stored in the host system’s memory only, and are never written to the host system’s filesystem.
+
