@@ -78,5 +78,8 @@ ENTRTPOINT instructions append the command line arguments paseed at container ru
 #=========================================================================================================================================
 #                                                           DOCKER Network                                                               #
 #=========================================================================================================================================
-
+#To list available Network
+# docker network ls
+# get details of a network
+# docker inspect <network_name>
 
