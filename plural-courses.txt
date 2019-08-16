@@ -1,0 +1,97 @@
+DecryptPluralSightVideos /F "C:\Users\akhan.AD-ONE\AppData\Local\Pluralsight\courses" /DB "C:\Users\akhan.AD-ONE\AppData\Local\Pluralsight\pluralsight.db" /TRANS /RM /OUT "C:\Study\Plural-Videos"
+
+
+google-drive :	adnankhan.maxout@gmail.com
+		khan.adnan.amazon2@gmail.com
+Course Dowloads:
+Plural-Videos:
+
+	BlockChain/
+	Cloud/
+	ConfiguraManagement/
+	Container/
+	DataScience/
+	EthicalHacking/
+	Linux/
+	Python/
+	Security/
+
+Plural-Videos/BlockChain:
+	Blockchain – Principles and Practices/
+	Blockchain Fundamentals/
+	Developing Applications on Ethereum Blockchain/
+
+Plural-Videos/Cloud:
+
+	Amazon Web Services (AWS) Fundamentals for System Administrators/
+	AWS Developer - Serverless Architecture and Monitoring/
+	aws-devops/
+	Deploying Serverless Applications in AWS Using the Serverless Application Model/
+	Introduction to AWS Cloud Security/
+	Managing Applications in AWS/
+	Serverless Computing - The Big Picture/
+	terraform/
+
+Plural-Videos/ConfiguraManagement:
+
+	 Continuous Delivery Using Docker And Ansible/
+	 Docker in Production Using Amazon Web Services/
+	 Getting Productive with Chef Cookbooks/
+	 Getting Started with Ansible on Windows/
+	 Planning and Installing Chef/
+
+Plural-Videos/Container:
+
+	 Container/
+	 Kubernetes/
+
+Plural-Videos/Container/Kubernetes:
+
+	 Getting Started with Kubernetes/
+	 Kubernetes Installation and Configuration Fundamentals/
+	 Managing the Kubernetes API Server and Pods/
+
+
+Plural-Videos/DataScience:
+
+	Data Science - The Big Picture/
+	Data Science with R/
+	Doing Data Science with Python/
+
+Plural-Videos/EthicalHacking:
+
+	Ethical Hacking - Cryptography/
+	Ethical Hacking - Enumeration/
+	Ethical Hacking - Hacking Mobile Platforms/
+	Ethical Hacking - Hacking the Internet of Things (IoT)/
+	Ethical Hacking - Hacking Wireless Networks/
+	Ethical Hacking - Malware Threats/
+	Ethical Hacking - Scanning Networks/
+	Ethical Hacking - Sniffing/
+	Ethical Hacking - Understanding Ethical Hacking/
+	Ethical Hacking - Vulnerability Analysis/
+
+
+Plural-Videos/Linux:
+
+ 	Red Hat Enterprise Linux Shell Scripting Fundamentals/
+ 	Shell Scripting with Bash/
+
+
+Plural-Videos/Python:
+
+	Python – Beyond the Basics/
+	Python Fundamentals/
+	Understanding Machine Learning with Python/
+
+
+Plural-Videos/Security:
+
+	Introduction to Information Security/
+	Linux Host Security/
+	Network Security Basics/
+	Securing Cloud DevOps in PaaS, IaaS, and SaaS Settings/
+	Spring Security - Authentication - Authorization - Building Effective Layers of Defense/
+
+
+
