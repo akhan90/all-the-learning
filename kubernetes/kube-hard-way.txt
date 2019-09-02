@@ -127,7 +127,7 @@ done
 
  Two Worker machines with CentOS 7
 
-for i in 0 1 2; do
+for i in 0 1 ; do
   gcloud compute instances create worker-${i} \
     --async \
     --boot-disk-size 10GB \
@@ -146,7 +146,7 @@ gcloud compute instances list
 
 ssh in each of the machines
 
-gcloud compute ssh worker-0
+  gcloud compute ssh worker-0
 gcloud compute ssh worker-1
 gcloud compute ssh controller-0
 gcloud compute ssh controller-1
@@ -157,82 +157,78 @@ gcloud compute ssh controller-1
 #=========================================================================================================================================
 
 1) certificate Authority , CA certificate with be used to generate other certificates.
+{
 
-    {
-
-    cat > ca-config.json <<EOF
-    {
-    "signing": {
-        "default": {
-        "expiry": "8760h"
-        },
-        "profiles": {
-        "kubernetes": {
-            "usages": ["signing", "key encipherment", "server auth", "client auth"],
-            "expiry": "8760h"
-        }
-        }
-    }
-    }
-    EOF
-
-    cat > ca-csr.json <<EOF
-    {
-    "CN": "Kubernetes",
-    "key": {
-        "algo": "rsa",
-        "size": 2048
+cat > ca-config.json <<EOF
+{
+  "signing": {
+    "default": {
+      "expiry": "8760h"
     },
-    "names": [
-        {
-        "C": "US",
-        "L": "Portland",
-        "O": "Kubernetes",
-        "OU": "CA",
-        "ST": "Oregon"
-        }
-    ]
+    "profiles": {
+      "kubernetes": {
+        "usages": ["signing", "key encipherment", "server auth", "client auth"],
+        "expiry": "8760h"
+      }
     }
-    EOF
+  }
+}
+EOF
 
-    cfssl gencert -initca ca-csr.json | cfssljson -bare ca
-
+cat > ca-csr.json <<EOF
+{
+  "CN": "Kubernetes",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "Kubernetes",
+      "OU": "CA",
+      "ST": "Oregon"
     }
+  ]
+}
+EOF
 
+cfssl gencert -initca ca-csr.json | cfssljson -bare ca
+
+}
 2) Client Server certificates
 
     a) Admin Client certificate
+{
 
-         {
+cat > admin-csr.json <<EOF
+{
+  "CN": "admin",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "system:masters",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
 
-        cat > admin-csr.json <<EOF
-        {
-        "CN": "admin",
-        "key": {
-            "algo": "rsa",
-            "size": 2048
-        },
-        "names": [
-            {
-            "C": "US",
-            "L": "Portland",
-            "O": "system:masters",
-            "OU": "Kubernetes The Hard Way",
-            "ST": "Oregon"
-            }
-        ]
-        }
-        EOF
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=ca-config.json \
+  -profile=kubernetes \
+  admin-csr.json | cfssljson -bare admin
 
-        cfssl gencert \
-        -ca=ca.pem \
-        -ca-key=ca-key.pem \
-        -config=ca-config.json \
-        -profile=kubernetes \
-        admin-csr.json | cfssljson -bare admin
-
-        }
-    
+}
     b) Kubelet Client certificate
         Kubelet uses node authorization to authenticate the requests it sends to the API server.
 
@@ -407,7 +403,35 @@ cfssl gencert \
 
 g) service Account Key pair 
     this key certificate is used to authenticate the service accounts in kubernetes
+{
 
+cat > service-account-csr.json <<EOF
+{
+  "CN": "service-accounts",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "Kubernetes",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+cfssl gencert \
+  -ca=ca.pem \
+  -ca-key=ca-key.pem \
+  -config=ca-config.json \
+  -profile=kubernetes \
+  service-account-csr.json | cfssljson -bare service-account
+
+}
 3) Distribute the certificates
 
 for instance in worker-0 worker-1 ; do
@@ -607,8 +631,8 @@ ssh in to the controller machines and run below on both the machines
 
 1) download the etcd server files.
 
-wget  \
-  "https://github.com/coreos/etcd/releases/download/v3.3.9/etcd-v3.3.9-linux-amd64.tar.gz"
+  wget  \
+    "https://github.com/coreos/etcd/releases/download/v3.3.9/etcd-v3.3.9-linux-amd64.tar.gz"
 
 Extract and install the etcd server and the etcdctl command line utility:
 
@@ -681,11 +705,11 @@ EOF
 }
 
 5) Check status of cluster
-sudo ETCDCTL_API=3 etcdctl member list \
-  --endpoints=https://127.0.0.1:2379 \
-  --cacert=/etc/etcd/ca.pem \
-  --cert=/etc/etcd/kubernetes.pem \
-  --key=/etc/etcd/kubernetes-key.pem
+  sudo ETCDCTL_API=3 etcdctl member list \
+    --endpoints=https://127.0.0.1:2379 \
+    --cacert=/etc/etcd/ca.pem \
+    --cert=/etc/etcd/kubernetes.pem \
+    --key=/etc/etcd/kubernetes-key.pem
 
 
 
@@ -699,12 +723,13 @@ ssh into the machines.
 
 1) create kubernetes configuration directory
 
-sudo mkdir -p /etc/kubernetes/config
+  sudo mkdir -p /etc/kubernetes/config
 
 2) Download and configure binaries for Control Plane components
 i.e kube-controller,kube-scheduler,api server and kubectl
 
-wget  \
+{
+  wget  \
   "https://storage.googleapis.com/kubernetes-release/release/v1.12.0/bin/linux/amd64/kube-apiserver" \
   "https://storage.googleapis.com/kubernetes-release/release/v1.12.0/bin/linux/amd64/kube-controller-manager" \
   "https://storage.googleapis.com/kubernetes-release/release/v1.12.0/bin/linux/amd64/kube-scheduler" \
@@ -713,7 +738,7 @@ wget  \
   chmod +x kube*
 
   sudo cp kube-apiserver kube-controller-manager kube-scheduler kubectl /usr/local/bin/
-
+}
 
   3) Configure API server
 
@@ -733,48 +758,48 @@ INTERNAL_IP=$(curl -s -H "Metadata-Flavor: Google" \
   create kubernetes api server service.
 
 
-cat <<EOF | sudo tee /etc/systemd/system/kube-apiserver.service
-[Unit]
-Description=Kubernetes API Server
-Documentation=https://github.com/kubernetes/kubernetes
+  cat <<EOF | sudo tee /etc/systemd/system/kube-apiserver.service
+  [Unit]
+  Description=Kubernetes API Server
+  Documentation=https://github.com/kubernetes/kubernetes
 
-[Service]
-ExecStart=/usr/local/bin/kube-apiserver \\
-  --advertise-address=${INTERNAL_IP} \\
-  --allow-privileged=true \\
-  --apiserver-count=2 \\
-  --audit-log-maxage=30 \\
-  --audit-log-maxbackup=3 \\
-  --audit-log-maxsize=100 \\
-  --audit-log-path=/var/log/audit.log \\
-  --authorization-mode=Node,RBAC \\
-  --bind-address=0.0.0.0 \\
-  --client-ca-file=/var/lib/kubernetes/ca.pem \\
-  --enable-admission-plugins=Initializers,NamespaceLifecycle,NodeRestriction,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota \\
-  --enable-swagger-ui=true \\
-  --etcd-cafile=/var/lib/kubernetes/ca.pem \\
-  --etcd-certfile=/var/lib/kubernetes/kubernetes.pem \\
-  --etcd-keyfile=/var/lib/kubernetes/kubernetes-key.pem \\
-  --etcd-servers=https://10.240.0.10:2379,https://10.240.0.11:2379 \\
-  --event-ttl=1h \\
-  --experimental-encryption-provider-config=/var/lib/kubernetes/encryption-config.yaml \\
-  --kubelet-certificate-authority=/var/lib/kubernetes/ca.pem \\
-  --kubelet-client-certificate=/var/lib/kubernetes/kubernetes.pem \\
-  --kubelet-client-key=/var/lib/kubernetes/kubernetes-key.pem \\
-  --kubelet-https=true \\
-  --runtime-config=api/all \\
-  --service-account-key-file=/var/lib/kubernetes/service-account.pem \\
-  --service-cluster-ip-range=10.32.0.0/24 \\
-  --service-node-port-range=30000-32767 \\
-  --tls-cert-file=/var/lib/kubernetes/kubernetes.pem \\
-  --tls-private-key-file=/var/lib/kubernetes/kubernetes-key.pem \\
-  --v=2
-Restart=on-failure
-RestartSec=5
+  [Service]
+  ExecStart=/usr/local/bin/kube-apiserver \\
+    --advertise-address=${INTERNAL_IP} \\
+    --allow-privileged=true \\
+    --apiserver-count=2 \\
+    --audit-log-maxage=30 \\
+    --audit-log-maxbackup=3 \\
+    --audit-log-maxsize=100 \\
+    --audit-log-path=/var/log/audit.log \\
+    --authorization-mode=Node,RBAC \\
+    --bind-address=0.0.0.0 \\
+    --client-ca-file=/var/lib/kubernetes/ca.pem \\
+    --enable-admission-plugins=Initializers,NamespaceLifecycle,NodeRestriction,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota \\
+    --enable-swagger-ui=true \\
+    --etcd-cafile=/var/lib/kubernetes/ca.pem \\
+    --etcd-certfile=/var/lib/kubernetes/kubernetes.pem \\
+    --etcd-keyfile=/var/lib/kubernetes/kubernetes-key.pem \\
+    --etcd-servers=https://10.240.0.10:2379,https://10.240.0.11:2379 \\
+    --event-ttl=1h \\
+    --experimental-encryption-provider-config=/var/lib/kubernetes/encryption-config.yaml \\
+    --kubelet-certificate-authority=/var/lib/kubernetes/ca.pem \\
+    --kubelet-client-certificate=/var/lib/kubernetes/kubernetes.pem \\
+    --kubelet-client-key=/var/lib/kubernetes/kubernetes-key.pem \\
+    --kubelet-https=true \\
+    --runtime-config=api/all \\
+    --service-account-key-file=/var/lib/kubernetes/service-account.pem \\
+    --service-cluster-ip-range=10.32.0.0/24 \\
+    --service-node-port-range=30000-32767 \\
+    --tls-cert-file=/var/lib/kubernetes/kubernetes.pem \\
+    --tls-private-key-file=/var/lib/kubernetes/kubernetes-key.pem \\
+    --v=2
+  Restart=on-failure
+  RestartSec=5
 
-[Install]
-WantedBy=multi-user.target
-EOF
+  [Install]
+  WantedBy=multi-user.target
+  EOF
 
 4) Configure Kube-control-manager
 
@@ -878,7 +903,7 @@ Make changes in nginx.cong to include "kubernetes.default.svc.cluster.local"
 sudo vi /etc/nginx/nginx.conf
 at the end of http {braces}
 add line 
-inlude /etc/nginx/sites-available/*;
+include /etc/nginx/sites-available/*;
 sudo systemctl restart nginx
 
 8) Verify Services
@@ -987,7 +1012,7 @@ The following components will be installed on each node: runc, gVisor, container
 
 {
   sudo yum update
-  sudo yum -y install socat conntrack ipset
+  sudo yum -y install socat conntrack ipset wget
 }
 
 Download and install Worker binaries
@@ -1203,6 +1228,8 @@ gcloud compute ssh controller-0 \
   --command "kubectl get nodes --kubeconfig admin.kubeconfig"
 
 
+
+
 #=========================================================================================================================================
 #                                                Step 8: Provisioning Pod network routes                                                 #
 #=========================================================================================================================================
@@ -1210,9 +1237,26 @@ gcloud compute ssh controller-0 \
 
 Print pod cidr range for each  worker instance
 
-for instance in worker-0 worker-1 worker-2; do
+for instance in worker-0 worker-1 ; do
   gcloud compute instances describe ${instance} \
     --format 'value[separator=" "](networkInterfaces[0].networkIP,metadata.items[0].value)'
 done
 
 
+create routes for each worker instance
+
+for i in 0 1 ; do
+  gcloud compute routes create kubernetes-route-10-200-${i}-0-24 \
+    --network kubernetes-the-hard-way \
+    --next-hop-address 10.240.0.2${i} \
+    --destination-range 10.200.${i}.0/24
+done
+
+gcloud compute routes list --filter "network: kubernetes-the-hard-way"
+
+
+#=========================================================================================================================================
+#                                                Step 9: DNS Add on                                                 #
+#=========================================================================================================================================
+
+kubectl apply -f https://storage.googleapis.com/kubernetes-the-hard-way/coredns.yaml  
