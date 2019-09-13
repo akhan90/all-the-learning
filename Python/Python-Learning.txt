@@ -1,0 +1,16 @@
+#=========================================================================================================================================
+#                                                           Python                                                                       #
+#=========================================================================================================================================
+
+for importing a module use
+
+#import <module_name>
+to access the contents on the import module
+#module_name.function_to_be_used
+to import just a function from a module
+#from module_name import function_name
+to import a function from a module as a different function_name
+from module_name import function_name as new_func_name
+to check the attributes on a module
+user 
+help(module_name)
