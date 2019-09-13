@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: NameSpace
+metadata:
+  name: Test-Env
+  labels:
+    apps: test
+    tier: sys-test

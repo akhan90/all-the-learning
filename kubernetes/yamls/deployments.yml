@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+  name: deploy-fe
+  labels:
+    apps: app1
+    tier: be
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      apps: app1
+      tier: be
+  template:
+    metadata:
+      name: be-pods
+      labels: 
+        apps: app1
+        tier: be
+    spec:
+      containers:
+        - name: hello-world
+          image: nginx
+
+

@@ -1,0 +1,13 @@
+apiVersion: apps/v1
+kind: Pod
+metadata:
+  name: hello-world-pod
+  labels:
+    apps: app1
+    tier: be
+spec:
+  containers:
+    - name: hello-bro-again
+      image: nginx
+      #command: ["/bin/sh"]
+      #args: ["-c", "while true; do echo hello; sleep 10;done"]
