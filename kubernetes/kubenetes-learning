@@ -10,38 +10,17 @@ kubectl --namespace kube-system logs pod
  kubectl delete pods  --grace-period=0 --force --namespace kube-system pod
  https://kubernetes.io/docs/reference/kubectl/cheatsheet/
 
- {
-  sudo mv runsc-50c283b9f56bb7200938d9e207355f05f79f0d17 runsc
-  sudo mv runc.amd64 runc
-  chmod +x kubectl kube-proxy kubelet runc runsc
-  sudo mv kubectl kube-proxy kubelet runc runsc /usr/local/bin/
-  sudo tar -xvf crictl-v1.12.0-linux-amd64.tar.gz -C /usr/local/bin/
-  sudo tar -xvf cni-plugins-amd64-v0.6.0.tgz -C /opt/cni/bin/
- }
- 
-{
-  sudo tar -xvf containerd-1.2.0-rc.0.linux-amd64.tar.gz 
-  cp bin/* /bin/.
-}
+=================================================================================
+imperatice commands
+#dry run checks the commands and tells if resource can be created, it does not cretes the resource, good way of generating yamls
 
-cat <<EOF | sudo tee /var/lib/kubelet/kubelet-config.yaml
-kind: KubeletConfiguration
-apiVersion: kubelet.config.k8s.io/v1beta1
-authentication:
-  anonymous:
-    enabled: false
-  webhook:
-    enabled: true
-  x509:
-    clientCAFile: "/var/lib/kubernetes/ca.pem"
-authorization:
-  mode: Webhook
-clusterDomain: "cluster.local"
-clusterDNS:
-  - "10.32.0.10"
-podCIDR: "${POD_CIDR}"
-resolvConf: "/etc/resolv.conf"
-runtimeRequestTimeout: "15m"
-tlsCertFile: "/var/lib/kubelet/${HOSTNAME}.pem"
-tlsPrivateKeyFile: "/var/lib/kubelet/${HOSTNAME}-key.pem"
-EOF
+#POD generation
+kubectl run --generator=run-pod/v1 nginx --image=nginx --dry-run -o yaml
+
+#Deployment with replicas
+
+kubectl run --generator=deployment/v1 nginx --image=nginx --dry-run --replicas=4 -o yaml > nginx-deployment.yaml
+
+
+kubectl create service nodeport nginx --tcp=80:80 --node-port=30080 --dry-run -o yaml 
+
